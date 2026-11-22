@@ -2,30 +2,18 @@
 # Big Data Real Estate Analytics .gitignore
 # ==========================================
 
-# Large Raw & Processed Datasets (Auto-generated via scripts/01 & 02)
+# Large Raw Datasets (Auto-downloaded via scripts/01_ingest_data.py)
 data/raw/*
 !data/raw/.gitkeep
-data/properties/*
-!data/properties/.gitkeep
-data/features/*
-!data/features/.gitkeep
-!data/features/arbitrage_top50.csv
-!data/features/h3_micro_markets.parquet
 
-# Embedded Database Files
-*.duckdb
-*.duckdb.wal
-*.db
-*.sqlite3
+# Large Cleaned Hadoop Full Output (>100MB exceeds GitHub push limit)
+data/clean/full/clean_sales.tsv
 
 # Python bytecode & caching
 __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
-
-# Jupyter Notebook checkpoints
-.ipynb_checkpoints/
 
 # Virtual Environments
 venv/

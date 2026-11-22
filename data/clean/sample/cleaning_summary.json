@@ -1,0 +1,25 @@
+{
+  "mode": "sample",
+  "execution_engine": "Hadoop Streaming (Local Python Simulation)",
+  "elapsed_seconds": 0.42,
+  "counters": {
+    "raw_rows": 20020,
+    "rejected_rows": 54,
+    "duplicate_rows_removed": 5,
+    "conflicting_rows_excluded": 4,
+    "final_clean_rows": 19957
+  },
+  "reconciliation": {
+    "formula": "raw_rows = rejected_rows + duplicate_rows_removed + conflicting_rows_excluded + final_clean_rows",
+    "is_balanced": true,
+    "reconciled_sum": 20020
+  },
+  "rejection_breakdown": {
+    "missing_required_field": 2,
+    "invalid_price": 2,
+    "out_of_range_price": 46,
+    "invalid_date": 2,
+    "unsupported_category": 2
+  },
+  "output_file": "data\\clean\\sample\\clean_sales.tsv"
+}

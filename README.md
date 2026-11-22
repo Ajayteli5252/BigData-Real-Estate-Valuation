@@ -1,300 +1,279 @@
-# 🏠 Enterprise Real Estate Valuation & Predictive Modeling at Enterprise Scale
+# 🏠 Real Estate Price Analysis and Prediction Using Hadoop
 
-[![Course](https://img.shields.io/badge/Course-CSE3712_Big_Data_Analytics-blue?style=for-the-badge)](https://github.com/ShubhamPate-L/BigData-Real-Estate-Valuation)
-[![Dataset](https://img.shields.io/badge/Dataset-HM_Land_Registry_(Non--Kaggle)-brightgreen?style=for-the-badge)](https://www.gov.uk/government/statistical-data-sets/price-paid-data-downloads)
-[![Scale](https://img.shields.io/badge/Scale-1.63M_Transactions-orange?style=for-the-badge)](https://github.com/ShubhamPate-L/BigData-Real-Estate-Valuation)
-[![Engine](https://img.shields.io/badge/Engine-DuckDB_+_LightGBM-yellow?style=for-the-badge)](https://duckdb.org/)
-[![License](https://img.shields.io/badge/License-OGL_v3.0-blue?style=for-the-badge)](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/)
+[![Course](https://img.shields.io/badge/Course-CSE3712_Big_Data_Analytics-blue?style=for-the-badge)](https://github.com/Ajayteli5252/BigData-Real-Estate-Valuation)
+[![Dataset](https://img.shields.io/badge/Dataset-HM_Land_Registry_Price_Paid_(Non--Kaggle)-brightgreen?style=for-the-badge)](https://www.gov.uk/government/statistical-data-sets/price-paid-data-downloads)
+[![Processing](https://img.shields.io/badge/Processing-Apache_Hadoop_MapReduce_on_YARN-red?style=for-the-badge)](https://hadoop.apache.org/)
+[![Machine Learning](https://img.shields.io/badge/ML-Scikit--Learn_Ridge_Pipeline-orange?style=for-the-badge)](https://scikit-learn.org/)
+[![UI](https://img.shields.io/badge/Dashboard-Streamlit-FF4B4B?style=for-the-badge)](https://streamlit.io/)
 
 ---
 
 ## 📌 Executive Summary
 
-This repository delivers an end-to-end **Big Data Analytics (BDA)** enterprise system for residential property valuation across England & Wales.
+This project delivers an authentic, end-to-end **Big Data Analytics (BDA)** system for property transaction analysis and price prediction across England & Wales, designed specifically to demonstrate three core competencies to faculty:
 
-While traditional academic prototypes rely on small, static toy datasets (such as the King County dataset with ~21K rows in `Real_Estate_Valuation_Project.ipynb`), this project executes an authentic **~76x scale-up** to **1,635,889 geocoded property transactions** using official UK Government Open Data (**100% Non-Kaggle**).
-
-The architecture leverages:
-* **DuckDB Vectorized OLAP Engine**: Delivers sub-50ms analytical queries over columnar Snappy Parquet files.
-* **Uber H3 Global Discrete Grid (Res 7 & 8)**: Partitions England and Wales into **24,639 equidistant hexagonal micro-markets**.
-* **Macroeconomic Integration**: Directly injects the Bank of England's historical interest rate hike cycle (0.25% → 5.25%).
-* **LightGBM Quantile Risk Bands**: Generates a 10th percentile downside liquidation floor, a 50th percentile fair market value, and a 90th percentile upside ceiling.
-* **Native TreeSHAP & Arbitrage Engine**: Explains non-linear feature attributions in C++ and identifies statistically confirmed undervalued real estate opportunities.
-* **Interactive Web App & RESTful API**: Streamlit dashboard and FastAPI real-time microservices.
+1. **Real Data Ingestion & Auditing:** Ingesting **1,939,188 official property transactions** (2022–2023) from the UK HM Land Registry Open Data repository (100% Non-Kaggle).
+2. **Distributed Processing with Apache Hadoop:** Implementing a custom Python **MapReduce Streaming** pipeline on **YARN** and **HDFS** that parses, validates, filters, deduplicates, and resolves conflicts with exact counter reconciliation.
+3. **Exploratory Visualizations & Machine Learning:** Serving an interactive single-page **Streamlit dashboard** with market price trends and a **Scikit-Learn Ridge Regression** valuation engine achieving a **25.9% error reduction** over baseline out-of-time property valuation.
 
 ---
 
-## 🏗️ System Architecture & Completed Phases
+## 🏗️ System Architecture
 
 ```mermaid
 flowchart TD
-    subgraph S1 ["1. Data Acquisition & Storage Layer"]
-        D1["HM Land Registry\nPrice Paid (1.92M raw CSVs)"]
-        D2["UK Postcode Directory\n(1.74M geocoded points)"]
-        D3["DuckDB In-Memory OLAP\nVectorized Relational Join"]
-        D4["Snappy Parquet Partitioning\n(4.33x Compression Ratio)"]
-        D1 --> D3
-        D2 --> D3
-        D3 --> D4
+    subgraph S1 ["1. Raw Data Storage (HDFS)"]
+        R1["HM Land Registry CSVs\n(pp-2022.csv & pp-2023.csv)\n1,939,188 Raw Records"]
+        H1["HDFS Raw Directory\n/data/realestate/raw/"]
+        R1 -->|hdfs dfs -put| H1
     end
 
-    subgraph S2 ["2. Scalable Feature Engineering"]
-        F1["Uber H3 Hexagonal Grid\n(Res 7 & 8: 24,639 Micro-Markets)"]
-        F2["Haversine Distance to 5 Hubs\n(London, Birmingham, Manchester, Leeds, Bristol)"]
-        F3["Bank of England Base Rate Cycle\n(0.25% -> 5.25% Monetary Tightening)"]
-        F4["Cyclical Sine/Cosine Encodings\n(Annual & Weekly Seasonality)"]
-        D4 --> F1
-        D4 --> F2
-        D4 --> F3
-        D4 --> F4
+    subgraph S2 ["2. Apache Hadoop MapReduce on YARN"]
+        M1["Hadoop Streaming Mapper\n(scripts/mapper.py)\n- Python csv parser\n- £15K–£20M filter\n- Normalization & Date Extraction"]
+        SH["Shuffle & Sort Phase\n(Partition & Group by Transaction ID)"]
+        RD["Hadoop Streaming Reducer\n(scripts/reducer.py)\n- Deduplication of identical rows\n- Exclusion of conflicting rows\n- Final clean TSV emission"]
+        H1 --> M1
+        M1 -->|Key: Transaction ID\nValue: Normalized Fields| SH
+        SH --> RD
     end
 
-    subgraph S3 ["3. Scalable Machine Learning Pipeline"]
-        M1["Temporal Out-of-Time Split\n(Train 2022: 907K | Val 2023 H1: 342K | Test 2023 H2: 387K)"]
-        M2["Baseline Hedonic Regressor (Ridge)"]
-        M3["Enterprise LightGBM Regressor (RMSE)"]
-        M4["Quantile Risk Bands (alpha = 0.10, 0.50, 0.90)"]
-        F1 --> M1
-        F2 --> M1
-        F3 --> M1
-        F4 --> M1
-        M1 --> M2
-        M1 --> M3
-        M1 --> M4
+    subgraph S3 ["3. Clean Data Storage & Export"]
+        HC["HDFS Clean Output\n/data/realestate/clean/"]
+        LC["Local Clean TSV & Audit JSON\ndata/clean/sample/\ndata/clean/full/"]
+        RD --> HC
+        HC -->|hdfs dfs -getmerge| LC
     end
 
-    subgraph S4 ["4. Explainability & Arbitrage Engine"]
-        E1["Native TreeSHAP Feature Attributions\n(Base Value: £276,102)"]
-        E2["Anomaly-Filtered Arbitrage Detector\n(45,875 Verified Gems Found)"]
-        E3["DuckDB Comps Search Engine\n(Top 5 Hexagon Comps in <350ms)"]
-        M3 --> E1
-        M4 --> E2
-        D4 --> E3
-    end
-
-    subgraph S5 ["5. Delivery & User Applications"]
-        A1["Streamlit Web Dashboard\n(http://localhost:8501)"]
-        A2["FastAPI Real-Time Service\n(http://127.0.0.1:8000/docs)"]
-        E1 --> A1
-        E2 --> A1
-        E3 --> A1
-        E2 --> A2
-        E3 --> A2
+    subgraph S4 ["4. Analytics, ML & Interactive UI"]
+        DASH["Streamlit Web Dashboard\n(app/dashboard.py)\n- Audit Counters Reconciliation\n- 3 Market Visualizations\n- Interactive Price Estimation"]
+        ML["Scikit-Learn Ridge Pipeline\n(scripts/train_model.py)\n- Temporal Train 2022 / Test 2023\n- Log-Transformed Target\n- Out-of-Time Test MAE: £155,438"]
+        LC --> DASH
+        LC --> ML
+        ML -->|models/ridge_pipeline.joblib| DASH
     end
 ```
 
 ---
 
-## 📊 Key Results & Quantitative Benchmarks
+## 🧹 How We Cleaned the Data
 
-### 1. Model Evaluation Comparison (Out-of-Time Test Set: H2 2023, 386,701 Rows)
+All data cleaning is performed inside the **Hadoop Streaming MapReduce job**, reading from and writing to HDFS.
 
-All models were evaluated on future, unseen 2023 transactions to prevent lookahead bias:
+### 1. Selected Fields & Normalization
 
-| Model Architecture | $R^2$ (Log Scale) | MAE (£) | MdAPE (%) | Training Time | Role & Assessment |
-| :--- | :---: | :---: | :---: | :---: | :--- |
-| **Baseline Hedonic (Ridge)** | 0.5816 | £171,757,413 | 23.60% | 2.64s | Linear Econometric Benchmark |
-| **Enterprise LightGBM Regressor** | **0.6840** | **£121,459** | **19.22%** | **32.09s** | **Primary Model (+17.6% $R^2$ boost)** |
-| **LightGBM Quantile Median ($q_{50}$)** | 0.6797 | £120,629 | 18.80% | 24.00s | Robust Fair Market Value |
+The official HM Land Registry Price Paid dataset contains 16 CSV columns without headers. The Mapper extracts and standardizes the following 6 core attributes:
 
-### 2. Quantile Risk Bands & Uncertainty Estimation (Novelty 2)
+| Column Index | Field Name | Transformation & Standardization Applied |
+| :---: | :--- | :--- |
+| `0` | `transaction_id` | Stripped leading/trailing braces `{...}` to produce a clean UUID string key. |
+| `1` | `price` | Converted to integer. Strictly filtered between **£15,000** and **£20,000,000** (removes nominal legal transfers and institutional outliers). |
+| `2` | `sale_date` | Parsed from `YYYY-MM-DD HH:MM` into standard `YYYY-MM-DD`. Derived `sale_year` (int) and `sale_month` (int). |
+| `4` | `property_type` | Validated against official UK categories: `D` (Detached), `S` (Semi-Detached), `T` (Terraced), `F` (Flat/Maisonette), `O` (Other). |
+| `6` | `tenure` | Validated against tenure codes: `F` (Freehold), `L` (Leasehold). |
+| `13` | `county` | Stripped whitespace, converted to standard uppercase English county (e.g., `TYNE AND WEAR`, `GREATER LONDON`). |
 
-Instead of a fragile single-point price, the platform outputs probabilistic uncertainty bounds:
-* **Liquidation Floor ($\alpha = 0.10$):** Pinball Loss = `0.06550` (Downside risk boundary)
-* **Fair Market Median ($\alpha = 0.50$):** Pinball Loss = `0.13678` (Target center)
-* **Upside Ceiling ($\alpha = 0.90$):** Pinball Loss = `0.06472` (Premium valuation bound)
-* **Empirical 80% Confidence Interval Coverage:** **77.45%** of actual sales fell strictly within the predicted $[\hat{y}_{10}, \hat{y}_{90}]$ band (Target: 80.0%).
-* **Median Uncertainty Band Width:** **£191,583**.
+### 2. Output Column Order (Reducer Output)
 
-### 3. Top 10 Features by Global TreeSHAP Attribution (Phase 4)
+The Reducer emits tab-separated records (`TSV`) in the following documented column layout:
 
-Using LightGBM's native C++ TreeSHAP implementation across 10,000 representative observations:
+$$\text{transaction\_id} \quad \text{price} \quad \text{sale\_date} \quad \text{sale\_year} \quad \text{sale\_month} \quad \text{county} \quad \text{property\_type} \quad \text{tenure}$$
 
-| Rank | Feature Name | Mean \|SHAP\| | Directional Impact | Interpretation |
-| :---: | :--- | :---: | :---: | :--- |
-| 1 | `h3_median_price` | **0.1606** | Positive (+) | Primary hyper-local baseline of the hexagonal cell |
-| 2 | `property_type` | **0.1358** | Non-linear | Detached single-family vs. Flat structural distinction |
-| 3 | `h3_mean_price` | **0.1045** | Positive (+) | Secondary micro-market wealth indicator |
-| 4 | `h3_p75_price` | **0.0804** | Positive (+) | Local upper-quartile housing quality ceiling |
-| 5 | `h3_p25_price` | **0.0696** | Positive (+) | Local entry-level price support floor |
-| 6 | `is_freehold` | **0.0588** | Positive (+) | Freehold land ownership premium over leasehold |
-| 7 | `type_detached` | **0.0504** | Positive (+) | Detached property premium |
-| 8 | `tenure` | **0.0501** | Non-linear | Structural tenure categorization |
-| 9 | `h3_freehold_ratio` | **0.0500** | Negative (-) | Lower freehold areas (dense flats) correlate with lower ticket sizes |
-| 10 | `h3_detached_ratio` | **0.0500** | Negative (-) | Relative micro-market structural mix |
+### 3. Actual Raw vs. Cleaned Row Example
 
-### 4. Real-World Arbitrage Case Study (Novelty 3 Upgrade)
+#### Actual Raw Input Row (from `data/raw/pp-2023.csv`):
+```text
+"{01EB45F0-49DB-40F3-E063-4704A8C05FDE}",169950,"2023-07-05 00:00","NE28 7JR","T","N","F","1","","CESTRIUM COURT","","WALLSEND","NORTH TYNESIDE","TYNE AND WEAR","A","A"
+```
 
-The Anomaly-Filtered Arbitrage Engine identified **45,875 verified underpriced listings** in H2 2023.
-
-**Audited Opportunity #1 (Kings Road, Birmingham):**
-* **Actual Transaction Price:** **£50,000**
-* **Model Predicted Fair Value:** **£240,806** (Discount: **79.2%**)
-* **Model 10th Percentile Floor:** **£183,851**
-* **Arbitrage Opportunity Score (AOS):** **158.06**
-* **DuckDB Comps Validation (Same 0.1 km Hexagon):**
-  1. *Dunedin Road (0.07 km away)*: Sold for **£235,000** (2023-08-30)
-  2. *Dunedin Road (0.07 km away)*: Sold for **£250,000** (2022-07-19)
-  3. *Kings Road (0.10 km away)*: Sold for **£235,000** (2023-11-29)
-  4. *Blythe Grove (0.09 km away)*: Sold for **£168,000** (2022-05-04)
-  *(This empirically proves the property was sold at a massive discount relative to immediate neighbors).*
-
----
-
-## 🚀 How to Run the Project (Step-by-Step Instructions)
-
-### 1. Prerequisites & Environment Setup
-
-Python 3.11+ is required. Clone the repository and install all dependencies:
-
-```bash
-git clone https://github.com/ShubhamPate-L/BigData-Real-Estate-Valuation.git
-cd BigData-Real-Estate-Valuation
-pip install -r requirements.txt
+#### Final Cleaned Output Row (from `data/clean/full/clean_sales.tsv`):
+```tsv
+01EB45F0-49DB-40F3-E063-4704A8C05FDE	169950	2023-07-05	2023	07	TYNE AND WEAR	T	F
 ```
 
 ---
 
-### 2. Run the Interactive Streamlit Web Dashboard
+### 4. Edge-Case Handling (Demonstration Examples)
 
-Launch the full-featured interactive web application:
+To test the resilience of the MapReduce job, a set of labeled edge cases was constructed and verified:
 
+#### A. Identical Duplicates (`duplicate_rows_removed`)
+* **Input Records:** Two rows sharing identical transaction ID `{TEST-DUP-01}` and identical normalized fields:
+  ```text
+  "{TEST-DUP-01}",250000,"2022-03-15 00:00","SW1A 1AA","F","N","L","1","","STREET","","LONDON","WESTMINSTER","GREATER LONDON","A","A"
+  "{TEST-DUP-01}",250000,"2022-03-15 00:00","SW1A 1AA","F","N","L","1","","STREET","","LONDON","WESTMINSTER","GREATER LONDON","A","A"
+  ```
+* **Reducer Action:** Emits exactly **one** clean row. The second record increments the Hadoop counter `duplicate_rows_removed` (+1).
+
+#### B. Conflicting Records (`conflicting_rows_excluded`)
+* **Input Records:** Two rows sharing the same transaction ID `{TEST-CONF-01}` but having conflicting prices or attributes:
+  ```text
+  "{TEST-CONF-01}",300000,"2022-04-10 00:00","M1 1AD","S","N","F","10","","HIGH ST","","MANCHESTER","MANCHESTER","GREATER MANCHESTER","A","A"
+  "{TEST-CONF-01}",450000,"2022-04-10 00:00","M1 1AD","S","N","F","10","","HIGH ST","","MANCHESTER","MANCHESTER","GREATER MANCHESTER","A","A"
+  ```
+* **Reducer Action:** Rejects **both** rows entirely to prevent ambiguous data poisoning. Increments the Hadoop counter `conflicting_rows_excluded` (+2). Zero rows for this ID enter the final dataset.
+
+#### C. Invalid / Out-of-Range Records (`rejected_rows`)
+* **Input Record (Below minimum threshold):**
+  ```text
+  "{TEST-INV-01}",5000,"2022-01-01 00:00","B1 1AA","D","N","F","...","WEST MIDLANDS","A","A"
+  ```
+* **Mapper Action:** Price £5,000 is below the £15,000 threshold. The mapper discards the row immediately, reporting `reporter:counter:DataCleaning,rejected_rows,1` and `reporter:counter:DataCleaning,out_of_range_price,1` to stderr.
+
+---
+
+### 5. Hadoop Counter Reconciliation Accounting
+
+Every single row entering the pipeline is mathematically accounted for according to the strict conservation formula:
+
+$$\text{raw\_rows} = \text{rejected\_rows} + \text{duplicate\_rows\_removed} + \text{conflicting\_rows\_excluded} + \text{final\_clean\_rows}$$
+
+| Pipeline Metric | Sample Mode (Classroom Demo) | Full Mode (Complete Dataset) | Accounting Formula Term |
+| :--- | :---: | :---: | :--- |
+| **Total Raw Input Rows** | **20,020** | **1,939,188** | $\text{raw\_rows}$ |
+| **[-] Mapper Rejected Rows** | 54 | 10,077 | $\text{rejected\_rows}$ |
+| *• Missing required fields* | 2 | 0 | |
+| *• Invalid price formats* | 2 | 0 | |
+| *• Out-of-range prices (<£15k or >£20M)* | 46 | 10,077 | |
+| *• Invalid date formats* | 2 | 0 | |
+| *• Unsupported category codes* | 2 | 0 | |
+| **[-] Duplicate Rows Removed** | 5 | 0 | $\text{duplicate\_rows\_removed}$ |
+| **[-] Conflicting Rows Excluded** | 4 | 0 | $\text{conflicting\_rows\_excluded}$ |
+| **[=] Final Clean Output Rows** | **19,957** | **1,929,111** | $\text{final\_clean\_rows}$ |
+| **Reconciliation Status** | **PASSED (Exact)** | **PASSED (Exact)** | $20,020 == 54 + 5 + 4 + 19,957$ |
+
+---
+
+## 💻 Hadoop HDFS & YARN Execution Commands
+
+### 1. Cluster Setup & Daemon Verification
 ```bash
-python run_dashboard.py
-# Alternatively:
+# Start HDFS and YARN daemons on WSL2 Ubuntu
+start-dfs.sh
+start-yarn.sh
+
+# Confirm running Java processes
+jps
+# Output shows: NameNode, DataNode, SecondaryNameNode, ResourceManager, NodeManager
+```
+
+### 2. Upload Raw Files to HDFS
+```bash
+# Create HDFS input directories
+hdfs dfs -mkdir -p /data/realestate/raw/sample/
+hdfs dfs -mkdir -p /data/realestate/raw/full/
+
+# Upload raw CSVs unchanged into HDFS
+hdfs dfs -put -f data/sample/raw/sample_raw.csv /data/realestate/raw/sample/
+hdfs dfs -put -f data/raw/pp-2022.csv /data/realestate/raw/full/
+hdfs dfs -put -f data/raw/pp-2023.csv /data/realestate/raw/full/
+
+# List raw files in HDFS
+hdfs dfs -ls /data/realestate/raw/sample/
+```
+
+### 3. Submit Hadoop Streaming Job to YARN
+```bash
+# Reset output directory (safe rerun without touching raw files)
+hdfs dfs -rm -r -f /data/realestate/clean/sample/
+
+# Submit MapReduce job
+hadoop jar $HADOOP_HOME/share/hadoop/tools/lib/hadoop-streaming-*.jar \
+    -files scripts/mapper.py,scripts/reducer.py \
+    -mapper "python3 mapper.py" \
+    -reducer "python3 reducer.py" \
+    -input /data/realestate/raw/sample/* \
+    -output /data/realestate/clean/sample/
+```
+
+### 4. Inspect Hadoop Counters & Output in HDFS
+```bash
+# Preview first 5 clean records in HDFS
+hdfs dfs -cat /data/realestate/clean/sample/part-* | head -n 5
+
+# Export clean output from HDFS to local project
+hdfs dfs -getmerge /data/realestate/clean/sample/ data/clean/sample/clean_sales.tsv
+```
+
+*(Note: For environments without active Hadoop clusters, `python scripts/run_local_streaming.py --mode sample` executes an identical stream simulation with matching counters).*
+
+---
+
+## 📊 Streamlit Interactive Dashboard
+
+The Streamlit dashboard (`app/dashboard.py`) provides an interactive interface featuring:
+1. **Pipeline Mode Selector:** Toggle between *Sample Mode* (demo) and *Full Mode* (1.93M records).
+2. **Data Preparation Summary Card:** Real-time Hadoop counter metrics and mathematical balance confirmation.
+3. **Three Clean Property Price Charts:**
+   - **Chart 1:** Median price for the 10 counties with the highest sales volume.
+   - **Chart 2:** Median price broken down by property type (Detached, Semi-Detached, Terraced, Flat, Other).
+   - **Chart 3:** Monthly median price chronological trend from January 2022 to December 2023.
+4. **Interactive "Estimate Sale Price" Form:** Allows user to select county, property type, tenure, sale year, and month to receive instant Ridge regression predictions.
+
+To launch:
+```bash
 streamlit run app/dashboard.py
 ```
-
-Open your browser at: **`http://localhost:8501`**
-
-#### What you can do in the Dashboard:
-* **Tab 1 (🔮 Real-Time Property Valuator & Comps):** Enter any UK postcode (e.g. `B449HN`, `RM139JJ`, `SW1A1AA`), select property type, tenure, and listed asking price. Instantly get:
-  * Executive metric cards for Liquidation Floor (£), Fair Value (£), Upside Ceiling (£), and 80% Confidence Band Width.
-  * Verified Arbitrage Alert badge if the property is undervalued.
-  * Interactive table of the Top 5 Comparable Sales in the exact same micro-market.
-* **Tab 2 (💎 Arbitrage & Hidden Gems Explorer):** Explore the top 50 statistically verified undervalued properties with filters for county, minimum discount %, and maximum price.
-* **Tab 3 (📊 Big Data OLAP Analytics):** View live DuckDB aggregations over 1.63M records (dwelling type price distributions, Bank of England rate hike cycle trends).
+*Access at: `http://localhost:8501`*
 
 ---
 
-### 3. Run the FastAPI REST Server
+## 🤖 Machine Learning Model & Viva Metrics
 
-Launch the production RESTful API microservice:
+We implemented a single, interpretable **Scikit-Learn Ridge Regression** pipeline (`TransformedTargetRegressor` modeling price on $\log(1+y)$ scale):
+* **Features:** `county`, `property_type`, `tenure` (OneHotEncoded with `handle_unknown='ignore'`), `sale_year`, `sale_month` (StandardScaler).
+* **Train / Test Split:** Strict temporal out-of-time evaluation (trained on 2022 sales, evaluated on 2023 sales).
 
-```bash
-python run_api.py
-# Alternatively:
-uvicorn app.api:app --reload --port 8000
-```
+### Quantitative Results (Full Dataset: 1,929,111 Clean Rows)
 
-#### Available Endpoints:
-* **Interactive Swagger Documentation**: [`http://127.0.0.1:8000/docs`](http://127.0.0.1:8000/docs)
-* **Alternative Redoc Documentation**: [`http://127.0.0.1:8000/redoc`](http://127.0.0.1:8000/redoc)
-* **Health Check**: `GET http://127.0.0.1:8000/health`
-* **Real-Time Valuation**: `POST http://127.0.0.1:8000/predict`
-  ```json
-  {
-    "postcode": "B449HN",
-    "property_type": "S",
-    "is_new_build": "N",
-    "tenure": "F",
-    "asking_price": 50000
-  }
-  ```
-* **Top Arbitrage Opportunities**: `GET http://127.0.0.1:8000/arbitrage/top?limit=25`
-* **Local Comps**: `GET http://127.0.0.1:8000/comps?postcode=B449HN&property_type=S&tenure=F&limit=5`
+| Model Metric | Full Mode Value | Sample Mode Value | Interpretation |
+| :--- | :---: | :---: | :--- |
+| **Training Records (2022)** | 1,071,952 | 9,997 | Historical baseline |
+| **Testing Records (2023)** | 857,159 | 9,960 | Out-of-time future evaluation |
+| **Training Median Price** | £280,000 | £290,000 | Naive prediction benchmark |
+| **Baseline Test MAE** | £209,672 | £179,543 | Error if predicting median |
+| **Ridge Model Test MAE** | **£155,438** | **£142,205** | Actual pipeline test error |
+| **MAE Improvement** | **£54,234 (25.9%)** | **£37,338 (20.8%)** | Substantial accuracy boost |
+| **Log-Scale $R^2$** | **0.4884** | **0.3341** | Variance explained |
+
+> **🎓 One-Minute Viva Explanation for Faculty:**  
+> *"The Ridge regression pipeline achieves an out-of-time test MAE of £155,438 on 2023 sales, which reduces valuation error by £54,234 (a 25.9% improvement) compared to the baseline of always predicting the 2022 training median price of £280,000."*
 
 ---
 
-### 4. Run Automated Unit & Verification Tests
+## 🚀 Quickstart & Demo Sequence
 
-To verify all trained models, DuckDB queries, and API endpoints programmatically:
-
-```bash
-python scripts/test_api_and_dashboard.py
-```
-
----
-
-### 5. (Optional) Re-running the Full Data & Training Pipeline from Scratch
-
-To re-download the government data and retrain all models from scratch:
+### Prerequisites
+* Windows 11 with Python 3.10+ installed.
+* WSL2 Ubuntu (for native Hadoop execution) or standard Windows PowerShell (for local streaming simulation).
 
 ```bash
-# Step 1: Download official UK Government CSVs (433 MB)
+# 1. Install required dependencies
+pip install -r requirements.txt
+
+# 2. Ingest raw 2022 and 2023 data
 python scripts/01_ingest_data.py
 
-# Step 2: Clean, relational join, and export Snappy Parquet (DuckDB)
-python scripts/02_clean_and_to_parquet.py
+# 3. Generate sample demo data
+python scripts/create_sample_data.py
 
-# Step 3: Run DuckDB OLAP benchmark queries
-python scripts/03_duckdb_analytics.py
+# 4. Run Hadoop cleaning pipeline (Sample Mode)
+python scripts/run_local_streaming.py --mode sample
 
-# Step 4: Compute Uber H3, economic proximity, and macro interest rates
-python scripts/04_feature_engineering.py
+# 5. Train Ridge regression model
+python scripts/train_model.py --mode sample
 
-# Step 5: Train Baseline Hedonic Ridge and LightGBM Quantile Models
-python scripts/05_train_models.py
-
-# Step 6: Run TreeSHAP attribution and generate Arbitrage datasets
-python scripts/06_explainability_and_arbitrage.py
+# 6. Launch web dashboard
+python run_dashboard.py
 ```
 
 ---
 
-## 📂 Repository File Structure
+## 📋 Summary of Changes (Kept vs. Removed)
 
-```
-BigData-Real-Estate-Valuation/
-│
-├── app/                                        # Web Dashboard & API Microservice
-│   ├── __init__.py
-│   ├── api.py                                  # FastAPI REST application endpoints
-│   ├── dashboard.py                            # Streamlit multi-tab web application
-│   └── engine.py                               # Low-latency valuation & DuckDB comps engine
-│
-├── data/                                       # Data Storage Directory (Partitioned & Columnar)
-│   ├── raw/                                    # Raw Government CSV downloads (gitignored)
-│   ├── properties/                             # Snappy-compressed Parquet files (gitignored)
-│   └── features/
-│       ├── arbitrage_top50.csv                 # Top 50 audited undervalued real estate gems
-│       ├── h3_micro_markets.parquet            # Precomputed 24,639 H3 micro-market lookup cache
-│       └── feature_matrix.parquet              # 1.63M rows × 51 features (gitignored)
-│
-├── models/                                     # Serialized Machine Learning Artifacts
-│   ├── hedonic_ridge.joblib                    # Baseline Ridge model & StandardScaler
-│   ├── lgbm_point_regressor.joblib             # Primary Enterprise LightGBM Regressor (RMSE)
-│   ├── lgbm_quantile_q10.joblib                # 10th percentile downside risk floor
-│   ├── lgbm_quantile_q50.joblib                # 50th percentile fair market median
-│   ├── lgbm_quantile_q90.joblib                # 90th percentile upside ceiling
-│   ├── feature_importances.csv                 # LightGBM split & gain importance rankings
-│   ├── shap_feature_importance.csv             # Exact TreeSHAP global attribution rankings
-│   └── metrics_summary.json                    # Full out-of-time evaluation metrics audit
-│
-├── notebooks/
-│   └── 01_Big_Data_Scaleup_Phase1_and_2.ipynb  # Interactive coursework verification notebook
-│
-├── scripts/                                    # Automated Production Pipeline Scripts
-│   ├── 01_ingest_data.py                       # Streaming downloader with zip extraction
-│   ├── 02_clean_and_to_parquet.py              # Geospatial inner join & Parquet writer
-│   ├── 03_duckdb_analytics.py                  # DuckDB sub-50ms OLAP query benchmarks
-│   ├── 04_feature_engineering.py               # Uber H3, hub distances & BoE rate integration
-│   ├── 05_train_models.py                      # Scalable ML pipeline & quantile risk bands
-│   ├── 06_explainability_and_arbitrage.py      # TreeSHAP & anomaly-filtered arbitrage engine
-│   ├── precompute_cache.py                     # Generates instant H3 cache for app startup
-│   └── test_api_and_dashboard.py               # Automated unit test suite
-│
-├── run_api.py                                  # 1-Click launcher for FastAPI server
-├── run_dashboard.py                            # 1-Click launcher for Streamlit dashboard
-├── requirements.txt                            # Python dependencies manifest
-├── Advanced_Real_Estate_Valuation_Report.docx  # Academic technical report
-├── Real_Estate_Valuation_Project.ipynb         # Original King County baseline notebook
-├── work_done_till_now.md                       # Comprehensive progress log across all phases
-└── README.md                                   # This repository documentation
-```
-
----
-
-## 📜 Data License & Academic Attribution
-* **HM Land Registry Data**: Contains HM Land Registry data © Crown copyright and database right 2026. This data is licensed under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
-* **Postcode Coordinates Directory**: Contains National Statistics data © Crown copyright and database right.
+| Component Category | Retained & Streamlined | Removed Obsolete Components |
+| :--- | :--- | :--- |
+| **Processing Engine** | Apache Hadoop MapReduce (`mapper.py`, `reducer.py`, `run_hadoop_job.sh`) | DuckDB OLAP scripts, complex Parquet pipelines |
+| **Geographic Features** | Direct county field from sales data (`county`) | Postcode directory downloads, Haversine distances to cities, Uber H3 spatial hexagons |
+| **Machine Learning** | Single Scikit-Learn Ridge pipeline with temporal split | LightGBM, XGBoost, Quantile loss models, SHAP tree explainability, Arbitrage detection |
+| **API & Delivery** | Single-page Streamlit Dashboard (`app/dashboard.py`) | FastAPI microservice (`app/api.py`), API tests, obsolete Jupyter notebooks |
+| **Dependencies** | Minimal stack: `pandas`, `numpy`, `scikit-learn`, `streamlit`, `matplotlib`, `joblib` | `duckdb`, `pyarrow`, `h3`, `lightgbm`, `fastapi`, `uvicorn`, `pydantic` |
