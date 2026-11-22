@@ -145,13 +145,22 @@ $$\text{raw\_rows} = \text{rejected\_rows} + \text{duplicate\_rows\_removed} + \
 
 ## 💻 Hadoop HDFS & YARN Execution Commands
 
-### 1. Cluster Setup & Daemon Verification
+### 1. One-Time Cluster Setup & Daemon Management (WSL2 Ubuntu)
 ```bash
-# Start HDFS and YARN daemons on WSL2 Ubuntu
-start-dfs.sh
-start-yarn.sh
+# In WSL2 Ubuntu terminal (run as user ajayteli):
+chmod +x scripts/setup_hadoop_wsl.sh scripts/run_hadoop_job.sh
 
-# Confirm running Java processes
+# Run automated one-time installation (Java 11, Hadoop 3.3.6, SSH keys, HDFS config)
+./scripts/setup_hadoop_wsl.sh
+
+# Start cluster daemons manually if needed:
+$HADOOP_HOME/bin/hdfs --daemon start namenode
+$HADOOP_HOME/bin/hdfs --daemon start datanode
+$HADOOP_HOME/bin/hdfs --daemon start secondarynamenode
+$HADOOP_HOME/bin/yarn --daemon start resourcemanager
+$HADOOP_HOME/bin/yarn --daemon start nodemanager
+
+# Confirm all 5 Java daemons are active:
 jps
 # Output shows: NameNode, DataNode, SecondaryNameNode, ResourceManager, NodeManager
 ```
@@ -173,10 +182,12 @@ hdfs dfs -ls /data/realestate/raw/sample/
 
 ### 3. Submit Hadoop Streaming Job to YARN
 ```bash
-# Reset output directory (safe rerun without touching raw files)
+# Automated submission script handles safety cleanup, YARN execution, and output export:
+./scripts/run_hadoop_job.sh sample
+
+# Or submit manually via hadoop streaming JAR:
 hdfs dfs -rm -r -f /data/realestate/clean/sample/
 
-# Submit MapReduce job
 hadoop jar $HADOOP_HOME/share/hadoop/tools/lib/hadoop-streaming-*.jar \
     -files scripts/mapper.py,scripts/reducer.py \
     -mapper "python3 mapper.py" \
@@ -187,11 +198,14 @@ hadoop jar $HADOOP_HOME/share/hadoop/tools/lib/hadoop-streaming-*.jar \
 
 ### 4. Inspect Hadoop Counters & Output in HDFS
 ```bash
-# Preview first 5 clean records in HDFS
+# Preview first 5 clean records directly inside HDFS
 hdfs dfs -cat /data/realestate/clean/sample/part-* | head -n 5
 
-# Export clean output from HDFS to local project
-hdfs dfs -getmerge /data/realestate/clean/sample/ data/clean/sample/clean_sales.tsv
+# Export clean output from HDFS to local project (WSL2 compatible)
+hdfs dfs -cat /data/realestate/clean/sample/part-* > data/clean/sample/clean_sales.tsv
+
+# Inspect audit counters JSON generated from Hadoop job log
+cat data/clean/sample/cleaning_summary.json
 ```
 
 *(Note: For environments without active Hadoop clusters, `python scripts/run_local_streaming.py --mode sample` executes an identical stream simulation with matching counters).*
@@ -240,31 +254,69 @@ We implemented a single, interpretable **Scikit-Learn Ridge Regression** pipelin
 
 ---
 
-## 🚀 Quickstart & Demo Sequence
+## 🚀 Quickstart & Classroom Demo Sequence
 
-### Prerequisites
-* Windows 11 with Python 3.10+ installed.
-* WSL2 Ubuntu (for native Hadoop execution) or standard Windows PowerShell (for local streaming simulation).
+### A. One-Time Setup (Windows 11 & WSL2 Ubuntu)
+1. **Windows Python Dependencies (PowerShell):**
+   ```powershell
+   pip install -r requirements.txt
+   ```
+2. **Hadoop Cluster Setup (WSL2 Ubuntu as `ajayteli`):**
+   ```bash
+   wsl -d Ubuntu -u ajayteli
+   cd /mnt/c/Users/sajay/OneDrive/Desktop/BDA
+   chmod +x scripts/*.sh
+   ./scripts/setup_hadoop_wsl.sh
+   ```
 
+---
+
+### B. Classroom Demo Day Sequence (Step-by-Step Viva Order)
+
+Follow this exact order in front of faculty:
+
+#### Step 1: Show a Raw Uncleaned Record (Terminal)
 ```bash
-# 1. Install required dependencies
-pip install -r requirements.txt
+# In WSL2 or PowerShell:
+head -n 2 data/sample/raw/sample_raw.csv
+```
+*Explain: Show the raw HM Land Registry 16-field CSV with quoted commas, missing fields, and extra unneeded address columns.*
 
-# 2. Ingest raw 2022 and 2023 data
-python scripts/01_ingest_data.py
+#### Step 2: Run the Real Hadoop MapReduce Job on YARN
+```bash
+# In WSL2 Ubuntu:
+./scripts/run_hadoop_job.sh sample
+```
+*Explain: Hadoop Streaming uploads the file to HDFS (`/data/realestate/raw/sample/`), distributes chunks to Python `mapper.py`, shuffles keys (`transaction_id`) to `reducer.py`, and writes clean partitions back to HDFS (`/data/realestate/clean/sample/part-*`) on YARN.*
 
-# 3. Generate sample demo data
-python scripts/create_sample_data.py
+#### Step 3: Show the Cleaned Row with the Exact Same Transaction ID
+```bash
+# In WSL2 or PowerShell:
+grep "01EB45F0-49DB-40F3-E063-4704A8C05FDE" data/clean/sample/clean_sales.tsv
+```
+*Explain: The curly braces are stripped, only 8 normalized fields are retained, county is normalized, and `sale_year` (2023) and `sale_month` (07) are derived.*
 
-# 4. Run Hadoop cleaning pipeline (Sample Mode)
-python scripts/run_local_streaming.py --mode sample
+#### Step 4: Show the Hadoop Audit Counters
+```bash
+cat data/clean/sample/cleaning_summary.json
+```
+*Explain the strict mathematical conservation formula: $\text{Raw (20,020)} = \text{Rejected (54)} + \text{Duplicates (5)} + \text{Conflicts (4)} + \text{Clean (19,957)}$. Zero data lost or untracked.*
 
-# 5. Train Ridge regression model
-python scripts/train_model.py --mode sample
-
-# 6. Launch web dashboard
+#### Step 5: Launch the Streamlit Web Dashboard
+```bash
+# In Windows PowerShell:
 python run_dashboard.py
 ```
+*Explain: The web app loads the clean HDFS output (`clean_sales.tsv`) and the Hadoop audit counters.*
+
+#### Step 6: Explore 3 Charts & Make One Live Price Prediction
+1. Walk through:
+   - **Chart 1:** Top 10 counties by sales volume (Greater London highest median).
+   - **Chart 2:** Price by property type (Detached > Semi-Detached > Terraced > Flat).
+   - **Chart 3:** 24-month chronological price timeline (2022 to 2023).
+2. Fill the **"Estimate Sale Price"** form:
+   - Select: `GREATER LONDON`, `Flat / Maisonette`, `Leasehold`, `2023`, `June (06)`.
+   - Click **"Estimate Sale Price"** -> Model instantly outputs **£470,725.95** (Out-of-time test MAE: £142,205).
 
 ---
 

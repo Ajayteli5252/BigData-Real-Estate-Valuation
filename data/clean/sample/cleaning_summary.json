@@ -1,7 +1,12 @@
 {
   "mode": "sample",
-  "execution_engine": "Hadoop Streaming (Local Python Simulation)",
-  "elapsed_seconds": 0.42,
+  "execution_engine": "Apache Hadoop Streaming on YARN",
+  "application_id": "application_1795348028444_0001",
+  "job_id": "job_1795348028444_0001",
+  "job_status": "SUCCEEDED",
+  "elapsed_seconds": 25,
+  "hdfs_input_dir": "/data/realestate/raw/sample",
+  "hdfs_output_dir": "/data/realestate/clean/sample",
   "counters": {
     "raw_rows": 20020,
     "rejected_rows": 54,
@@ -21,5 +26,5 @@
     "invalid_date": 2,
     "unsupported_category": 2
   },
-  "output_file": "data\\clean\\sample\\clean_sales.tsv"
+  "output_file": "data/clean/sample/clean_sales.tsv"
 }
