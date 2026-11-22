@@ -38,8 +38,12 @@ fi
 if [ -z "$HADOOP_HOME" ]; then
     if [ -d "$HOME/hadoop-3.3.6" ]; then
         export HADOOP_HOME="$HOME/hadoop-3.3.6"
+    elif [ -d "/home/ajayteli/hadoop-3.3.6" ]; then
+        export HADOOP_HOME="/home/ajayteli/hadoop-3.3.6"
+    elif [ -d "/opt/hadoop-3.3.6" ]; then
+        export HADOOP_HOME="/opt/hadoop-3.3.6"
     else
-        echo "Error: HADOOP_HOME is not set and $HOME/hadoop-3.3.6 not found."
+        echo "Error: HADOOP_HOME is not set and hadoop-3.3.6 not found under $HOME or /home/ajayteli."
         echo "Please run ./scripts/setup_hadoop_wsl.sh first."
         exit 1
     fi
