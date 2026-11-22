@@ -80,44 +80,43 @@ $$\text{transaction\_id} \quad \text{price} \quad \text{sale\_date} \quad \text{
 
 ### 3. Actual Raw vs. Cleaned Row Example
 
-#### Actual Raw Input Row (from `data/raw/pp-2023.csv`):
-```text
-"{01EB45F0-49DB-40F3-E063-4704A8C05FDE}",169950,"2023-07-05 00:00","NE28 7JR","T","N","F","1","","CESTRIUM COURT","","WALLSEND","NORTH TYNESIDE","TYNE AND WEAR","A","A"
-```
+#### Commands to Locate the Same Transaction in Both Datasets:
+* **In Raw CSV:**
+  ```bash
+  grep "01EB45F0-49DB-40F3-E063-4704A8C05FDE" data/sample/raw/sample_raw.csv
+  ```
+* **In Cleaned HDFS Output TSV:**
+  ```bash
+  grep "01EB45F0-49DB-40F3-E063-4704A8C05FDE" data/clean/sample/clean_sales.tsv
+  ```
 
-#### Final Cleaned Output Row (from `data/clean/full/clean_sales.tsv`):
-```tsv
-01EB45F0-49DB-40F3-E063-4704A8C05FDE	169950	2023-07-05	2023	07	TYNE AND WEAR	T	F
-```
+#### Field-by-Field Transformation Comparison:
+| Field Name | Raw CSV Value | Clean Output TSV Value | Transformation & Normalization Rule |
+| :--- | :--- | :--- | :--- |
+| **Transaction ID** | `"{01EB45F0-49DB-40F3-E063-4704A8C05FDE}"` | `01EB45F0-49DB-40F3-E063-4704A8C05FDE` | Stripped surrounding quotes and curly braces `{}` to provide clean join/primary key. |
+| **Price** | `169950` | `169950` | Parsed as positive integer; passed £15,000–£20,000,000 residential price boundary filter. |
+| **Sale Date** | `"2023-07-05 00:00"` | `2023-07-05` | Removed unneeded time component (`00:00`); standardized to ISO `YYYY-MM-DD`. |
+| **Sale Year** | *(Not present in raw CSV)* | `2023` | **Derived feature:** Extracted 4-digit year for temporal 2022/2023 train/test partitioning. |
+| **Sale Month** | *(Not present in raw CSV)* | `07` | **Derived feature:** Extracted 2-digit month to capture seasonal real estate cycles. |
+| **County** | `"TYNE AND WEAR"` | `TYNE AND WEAR` | Trimmed quotes and whitespace; converted to standard uppercase. |
+| **Property Type** | `"T"` | `T` | Terraced house code (`T`), verified against whitelist (`D, S, T, F, O`). |
+| **Tenure** | `"F"` | `F` | Freehold tenure code (`F`), verified against whitelist (`F, L`). |
+| **Address Fields** | Postcode, PAON, Street, Town | *(Excluded)* | Dropped verbose address fields with embedded quotes/commas to create compact tabular schema. |
 
 ---
 
-### 4. Edge-Case Handling (Demonstration Examples)
+### 4. Sample Construction & Edge-Case Handling (Demo Rows vs. Official Data)
 
-To test the resilience of the MapReduce job, a set of labeled edge cases was constructed and verified:
-
-#### A. Identical Duplicates (`duplicate_rows_removed`)
-* **Input Records:** Two rows sharing identical transaction ID `{TEST-DUP-01}` and identical normalized fields:
-  ```text
-  "{TEST-DUP-01}",250000,"2022-03-15 00:00","SW1A 1AA","F","N","L","1","","STREET","","LONDON","WESTMINSTER","GREATER LONDON","A","A"
-  "{TEST-DUP-01}",250000,"2022-03-15 00:00","SW1A 1AA","F","N","L","1","","STREET","","LONDON","WESTMINSTER","GREATER LONDON","A","A"
-  ```
-* **Reducer Action:** Emits exactly **one** clean row. The second record increments the Hadoop counter `duplicate_rows_removed` (+1).
-
-#### B. Conflicting Records (`conflicting_rows_excluded`)
-* **Input Records:** Two rows sharing the same transaction ID `{TEST-CONF-01}` but having conflicting prices or attributes:
-  ```text
-  "{TEST-CONF-01}",300000,"2022-04-10 00:00","M1 1AD","S","N","F","10","","HIGH ST","","MANCHESTER","MANCHESTER","GREATER MANCHESTER","A","A"
-  "{TEST-CONF-01}",450000,"2022-04-10 00:00","M1 1AD","S","N","F","10","","HIGH ST","","MANCHESTER","MANCHESTER","GREATER MANCHESTER","A","A"
-  ```
-* **Reducer Action:** Rejects **both** rows entirely to prevent ambiguous data poisoning. Increments the Hadoop counter `conflicting_rows_excluded` (+2). Zero rows for this ID enter the final dataset.
-
-#### C. Invalid / Out-of-Range Records (`rejected_rows`)
-* **Input Record (Below minimum threshold):**
-  ```text
-  "{TEST-INV-01}",5000,"2022-01-01 00:00","B1 1AA","D","N","F","...","WEST MIDLANDS","A","A"
-  ```
-* **Mapper Action:** Price £5,000 is below the £15,000 threshold. The mapper discards the row immediately, reporting `reporter:counter:DataCleaning,rejected_rows,1` and `reporter:counter:DataCleaning,out_of_range_price,1` to stderr.
+The classroom sample dataset (`data/sample/raw/sample_raw.csv`) contains **20,020 total records** constructed as follows:
+* **Official Government Source Records (20,000 rows):** Exactly 10,000 rows extracted from `data/raw/pp-2022.csv` and 10,000 rows extracted from `data/raw/pp-2023.csv`. Within these official records, 43 transactions naturally fell outside the £15,000–£20,000,000 price filter (e.g. nominal £1 transfers or commercial bulk sales).
+* **Deliberately Injected Demonstration Rows (20 rows):** Explicitly added via `scripts/create_sample_data.py` to trigger and verify every single Hadoop MapReduce counter during classroom viva:
+  1. **5 Identical Duplicates:** Exact duplicate rows of records at indices 100, 200, 300, 400, and 500 (Reducer keeps 1, drops 1 $\rightarrow$ `duplicate_rows_removed` = 5).
+  2. **4 Conflicting Rows:** Two rows with ID `{DEMO-CONFLICT-ID-001}` (different prices £250k vs £350k) and two rows with ID `{DEMO-CONFLICT-ID-002}` (different dates) (Reducer excludes all 4 rows $\rightarrow$ `conflicting_rows_excluded` = 4).
+  3. **3 Out-of-Range Price Demo Rows:** Low prices (£5k, £12k) and extreme high price (£25M) under `{DEMO-PRICE-*}` (Mapper rejects $\rightarrow$ combined with 43 natural out-of-range rows = 46 total).
+  4. **2 Invalid Price Format Rows:** Non-numeric strings `"INVALID_PRICE"` and `"-50000"` (Mapper rejects $\rightarrow$ `rejected_invalid_price` = 2).
+  5. **2 Invalid Date Rows:** Malformed date `"2022-13-45"` and `"NOT_A_DATE"` (Mapper rejects $\rightarrow$ `rejected_invalid_date` = 2).
+  6. **2 Missing Field Rows:** Missing or `"UNKNOWN"` county (Mapper rejects $\rightarrow$ `rejected_missing_field` = 2).
+  7. **2 Unsupported Category Rows:** Unsupported property type `"Z"` and unsupported tenure `"U"` (Mapper rejects $\rightarrow$ `rejected_unsupported_category` = 2).
 
 ---
 

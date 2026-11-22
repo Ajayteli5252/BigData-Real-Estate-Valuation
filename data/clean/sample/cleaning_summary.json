@@ -1,10 +1,10 @@
 {
   "mode": "sample",
   "execution_engine": "Apache Hadoop Streaming on YARN",
-  "application_id": "application_1795348028444_0001",
-  "job_id": "job_1795348028444_0001",
+  "application_id": "application_1795349201278_0001",
+  "job_id": "job_1795349201278_0001",
   "job_status": "SUCCEEDED",
-  "elapsed_seconds": 25,
+  "elapsed_seconds": 24,
   "hdfs_input_dir": "/data/realestate/raw/sample",
   "hdfs_output_dir": "/data/realestate/clean/sample",
   "counters": {

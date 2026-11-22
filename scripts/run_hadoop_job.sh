@@ -7,13 +7,19 @@
 set -e
 
 MODE="sample"
-while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        --mode) MODE="$2"; shift ;;
-        *) echo "Unknown parameter: $1"; exit 1 ;;
-    esac
+if [ "$1" = "sample" ] || [ "$1" = "full" ]; then
+    MODE="$1"
     shift
-done
+else
+    while [[ "$#" -gt 0 ]]; do
+        case $1 in
+            --mode) MODE="$2"; shift ;;
+            sample|full) MODE="$1" ;;
+            *) echo "Unknown parameter: $1"; exit 1 ;;
+        esac
+        shift
+    done
+fi
 
 echo "======================================================================"
 echo " Running Apache Hadoop Streaming Job (Mode: ${MODE^^})"
