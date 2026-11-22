@@ -25,8 +25,8 @@ def process_group(curr_id, records, counters):
             sys.stderr.write(f"reporter:counter:DataCleaning,duplicate_rows_removed,{n - 1}\n")
         counters["final_clean_rows"] += 1
         sys.stderr.write("reporter:counter:DataCleaning,final_clean_rows,1\n")
-        # Emit: transaction_id \t price \t sale_date \t sale_year \t sale_month \t county \t property_type \t tenure
-        sys.stdout.write(f"{curr_id}\t{chosen[0]}\t{chosen[1]}\t{chosen[2]}\t{chosen[3]}\t{chosen[4]}\t{chosen[5]}\t{chosen[6]}\n")
+        # Emit: transaction_id \t normalized fields (supports both 7-field and 9-field schema)
+        sys.stdout.write(f"{curr_id}\t" + "\t".join(chosen) + "\n")
     else:
         # Conflicting records sharing same transaction ID: exclude ALL of them
         counters["conflicting_rows_excluded"] += n
@@ -47,11 +47,11 @@ def main():
             continue
 
         parts = line.split("\t")
-        if len(parts) != 8:
+        if len(parts) < 8:
             continue
 
         t_id = parts[0]
-        val_tuple = tuple(parts[1:])  # price, sale_date, sale_year, sale_month, county, property_type, tenure
+        val_tuple = tuple(parts[1:])  # price, sale_date, sale_year, sale_month, county, property_type, tenure, [postcode, town]
 
         if current_id == t_id:
             current_records.append(val_tuple)

@@ -40,8 +40,10 @@ def main():
         raw_id = row[0].strip().strip("{}").strip()
         raw_price = row[1].strip()
         raw_date = row[2].strip()
+        raw_postcode = row[3].strip().upper() if len(row) > 3 and row[3] else ""
         raw_prop_type = row[4].strip().upper()
         raw_tenure = row[6].strip().upper()
+        raw_town = row[11].strip().upper() if len(row) > 11 and row[11] else ""
         raw_county = row[13].strip().upper()
 
         # Check required fields
@@ -107,9 +109,9 @@ def main():
             continue
 
         # Emit normalized record: key = transaction_id
-        # Value = price, sale_date, sale_year, sale_month, county, property_type, tenure
+        # Value = price, sale_date, sale_year, sale_month, county, property_type, tenure, postcode, town
         mapper_emitted_rows += 1
-        sys.stdout.write(f"{raw_id}\t{price}\t{sale_date}\t{sale_year}\t{sale_month}\t{raw_county}\t{raw_prop_type}\t{raw_tenure}\n")
+        sys.stdout.write(f"{raw_id}\t{price}\t{sale_date}\t{sale_year}\t{sale_month}\t{raw_county}\t{raw_prop_type}\t{raw_tenure}\t{raw_postcode}\t{raw_town}\n")
 
     # Final summary counters for mapper
     sys.stderr.write(f"reporter:counter:DataCleaning,raw_rows,{raw_rows}\n")

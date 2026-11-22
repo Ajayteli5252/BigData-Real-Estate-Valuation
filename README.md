@@ -101,7 +101,9 @@ $$\text{transaction\_id} \quad \text{price} \quad \text{sale\_date} \quad \text{
 | **County** | `"TYNE AND WEAR"` | `TYNE AND WEAR` | Trimmed quotes and whitespace; converted to standard uppercase. |
 | **Property Type** | `"T"` | `T` | Terraced house code (`T`), verified against whitelist (`D, S, T, F, O`). |
 | **Tenure** | `"F"` | `F` | Freehold tenure code (`F`), verified against whitelist (`F, L`). |
-| **Address Fields** | Postcode, PAON, Street, Town | *(Excluded)* | Dropped verbose address fields with embedded quotes/commas to create compact tabular schema. |
+| **Postcode** | `"NE28 7JR"` | `NE28 7JR` | Extracted optional field for locality and postcode search. |
+| **Town / City** | `"WALLSEND"` | `WALLSEND` | Extracted optional field for town-level search. |
+| **Street & Building** | PAON, SAON, Street | *(Excluded)* | Dropped verbose street/house name fields with embedded commas to maintain compact schema. |
 
 ---
 

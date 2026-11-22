@@ -49,10 +49,20 @@ def train(mode="sample"):
 
     # 1. Load Clean Dataset
     print("[1/5] Loading cleaned property sales data...")
+    with open(clean_tsv, "r", encoding="utf-8") as f:
+        first_line = f.readline()
+    n_cols = len(first_line.strip().split("\t"))
+    col_names = [
+        "transaction_id", "price", "sale_date", "sale_year",
+        "sale_month", "county", "property_type", "tenure"
+    ]
+    if n_cols >= 10:
+        col_names.extend(["postcode", "town"])
+
     df = pd.read_csv(
         clean_tsv,
         sep="\t",
-        names=COL_NAMES,
+        names=col_names,
         header=None,
         usecols=["price", "sale_year", "sale_month", "county", "property_type", "tenure"],
         dtype={
@@ -143,10 +153,13 @@ def train(mode="sample"):
 
     # 6. Save Model and Metrics
     print("\n[5/5] Serializing model and metrics artifacts...")
-    model_path = os.path.join(MODELS_DIR, "ridge_pipeline.joblib")
-    metrics_path = os.path.join(MODELS_DIR, "model_metrics.json")
+    mode_model_path = os.path.join(MODELS_DIR, f"ridge_pipeline_{mode}.joblib")
+    mode_metrics_path = os.path.join(MODELS_DIR, f"model_metrics_{mode}.json")
+    default_model_path = os.path.join(MODELS_DIR, "ridge_pipeline.joblib")
+    default_metrics_path = os.path.join(MODELS_DIR, "model_metrics.json")
 
-    joblib.dump(model, model_path)
+    joblib.dump(model, mode_model_path)
+    joblib.dump(model, default_model_path)
 
     metrics_data = {
         "dataset_mode": mode,
@@ -160,14 +173,18 @@ def train(mode="sample"):
         "test_r2_log_scale": round(float(test_r2_log), 4),
         "viva_explanation": viva_sentence,
         "input_features": feature_cols,
-        "model_file": model_path
+        "model_file": mode_model_path
     }
 
-    with open(metrics_path, "w", encoding="utf-8") as f:
+    with open(mode_metrics_path, "w", encoding="utf-8") as f:
         json.dump(metrics_data, f, indent=2)
 
-    print(f"      -> Saved trained model to:   {model_path}")
-    print(f"      -> Saved evaluation metrics: {metrics_path}")
+    with open(default_metrics_path, "w", encoding="utf-8") as f:
+        json.dump(metrics_data, f, indent=2)
+
+    print(f"      -> Saved mode model to:      {mode_model_path}")
+    print(f"      -> Saved mode metrics to:    {mode_metrics_path}")
+    print(f"      -> Saved default model to:   {default_model_path}")
     print(f"      -> Total Pipeline Latency:   {time.time() - start_time:.2f}s")
     print("=" * 70)
 

@@ -1,0 +1,20 @@
+{
+  "dataset_mode": "full",
+  "train_records_2022": 1071952,
+  "test_records_2023": 857159,
+  "training_median_price_gbp": 280000.0,
+  "test_mae_gbp": 155437.87,
+  "baseline_mae_gbp": 209672.0,
+  "mae_improvement_gbp": 54234.13,
+  "mae_improvement_pct": 25.87,
+  "test_r2_log_scale": 0.4884,
+  "viva_explanation": "The Ridge regression model achieves an out-of-time test MAE of \u00a3155,438, which improves prediction accuracy by \u00a354,234 (25.9% error reduction) over the baseline of always predicting the training median price of \u00a3280,000.",
+  "input_features": [
+    "county",
+    "property_type",
+    "tenure",
+    "sale_year",
+    "sale_month"
+  ],
+  "model_file": "models\\ridge_pipeline_full.joblib"
+}
