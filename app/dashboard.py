@@ -42,7 +42,7 @@ MONTH_NAMES = [
 @st.cache_data(show_spinner=False)
 def load_cleaning_summary(mode: str):
     """Load JSON cleaning audit produced by Hadoop MapReduce."""
-    summary_path = os.path.join("data", "clean", mode, "cleaning_summary.json")
+    summary_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "clean", mode, "cleaning_summary.json")
     if not os.path.exists(summary_path):
         return None
     try:
@@ -56,44 +56,43 @@ def load_cleaning_summary(mode: str):
 def load_clean_data(mode: str):
     """
     Load clean sales TSV output from Hadoop MapReduce.
-    Supports both 8-column legacy schema and 10-column extended schema with postcode/town.
+    Schema is always 10 columns:
+      transaction_id, price, sale_date, sale_year, sale_month,
+      county, property_type, tenure, postcode, town
     """
-    tsv_path = os.path.join("data", "clean", mode, "clean_sales.tsv")
+    # Resolve path relative to the project root (BDA/), not the CWD at runtime
+    _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    tsv_path = os.path.join(_project_root, "data", "clean", mode, "clean_sales.tsv")
     if not os.path.exists(tsv_path):
         return None
 
     try:
-        with open(tsv_path, "r", encoding="utf-8", errors="ignore") as f:
-            first_line = f.readline()
-        if not first_line:
-            return None
-        n_cols = len(first_line.strip().split("\t"))
-
+        # Hardcode the 10-column schema — both Sample and Full outputs have this layout.
         col_names = [
             "transaction_id", "price", "sale_date", "sale_year",
-            "sale_month", "county", "property_type", "tenure"
+            "sale_month", "county", "property_type", "tenure",
+            "postcode", "town"
         ]
-        if n_cols >= 10:
-            col_names.extend(["postcode", "town"])
-
         dtypes = {
+            "transaction_id": "string",
             "price": "int32",
+            "sale_date": "string",
             "sale_year": "int16",
             "sale_month": "int8",
             "county": "string",
             "property_type": "string",
-            "tenure": "string"
+            "tenure": "string",
+            "postcode": "string",
+            "town": "string"
         }
-        if n_cols >= 10:
-            dtypes["postcode"] = "string"
-            dtypes["town"] = "string"
 
         df = pd.read_csv(
             tsv_path,
             sep="\t",
             names=col_names,
             header=None,
-            dtype=dtypes
+            dtype=dtypes,
+            on_bad_lines="skip"
         )
         if "postcode" not in df.columns:
             df["postcode"] = ""
@@ -115,10 +114,11 @@ def load_trained_model(mode: str):
     Load saved scikit-learn Ridge regression pipeline and mode-specific metrics.
     Ensures model metrics match the selected dataset mode.
     """
-    mode_model_path = os.path.join("models", f"ridge_pipeline_{mode}.joblib")
-    mode_metrics_path = os.path.join("models", f"model_metrics_{mode}.json")
-    default_model_path = os.path.join("models", "ridge_pipeline.joblib")
-    default_metrics_path = os.path.join("models", "model_metrics.json")
+    _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    mode_model_path = os.path.join(_project_root, "models", f"ridge_pipeline_{mode}.joblib")
+    mode_metrics_path = os.path.join(_project_root, "models", f"model_metrics_{mode}.json")
+    default_model_path = os.path.join(_project_root, "models", "ridge_pipeline.joblib")
+    default_metrics_path = os.path.join(_project_root, "models", "model_metrics.json")
 
     model = None
     metrics = None
@@ -294,8 +294,9 @@ def main():
         st.session_state.search_page = 1
 
     # Header Bar & Mode Selector
-    full_available = os.path.exists(os.path.join("data", "clean", "full", "clean_sales.tsv"))
-    sample_available = os.path.exists(os.path.join("data", "clean", "sample", "clean_sales.tsv"))
+    _proj = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    full_available = os.path.exists(os.path.join(_proj, "data", "clean", "full", "clean_sales.tsv"))
+    sample_available = os.path.exists(os.path.join(_proj, "data", "clean", "sample", "clean_sales.tsv"))
 
     mode_options = []
     if full_available:
